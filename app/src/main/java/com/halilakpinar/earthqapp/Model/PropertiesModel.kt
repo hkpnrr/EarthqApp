@@ -22,7 +22,7 @@ data class PropertiesModel(val mag:Double,
                            var nst:Int,
                            var dmin:Double,
                            var rms:Double,
-                           var gap:Int,
+                           var gap:Double,
                            var magType:String,
                            var type:String,
                            var title:String

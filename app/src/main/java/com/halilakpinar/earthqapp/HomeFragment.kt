@@ -1,10 +1,21 @@
 package com.halilakpinar.earthqapp
 
+import android.content.Context
+import android.content.pm.PackageManager
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
 import android.os.Bundle
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import com.google.android.material.snackbar.Snackbar
 import com.halilakpinar.earthqapp.Model.NestedJSONModel
 import com.halilakpinar.earthqapp.Service.EarthquakeAPI
 import io.reactivex.android.schedulers.AndroidSchedulers
@@ -19,6 +30,17 @@ class HomeFragment : Fragment() {
 
     private val BASE_URL="https://earthquake.usgs.gov/fdsnws/event/1/"
     private var compositeDisposable:CompositeDisposable?=null
+
+
+    private lateinit var locationManager:LocationManager
+    private lateinit var locationListener: LocationListener
+
+    private lateinit var permissionLauncher:ActivityResultLauncher<String>
+
+    private var currentLatitude:Double?=null
+    private var currentLongitude:Double?=null
+
+
 
 
 
@@ -41,9 +63,63 @@ class HomeFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         compositeDisposable= CompositeDisposable()
 
+        registerLauncher()
+
+        getCurrentLocation()
 
         loadData()
 
+    }
+
+    fun registerLauncher(){
+
+        permissionLauncher=registerForActivityResult(ActivityResultContracts.RequestPermission()){ result->
+            if(result){
+                //permission granted
+                if(ContextCompat.checkSelfPermission(requireActivity().applicationContext,android.Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED){
+                    locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,10000,0f,locationListener)
+
+                }
+
+            }else{
+                //permission denied
+                Toast.makeText(requireContext(),"Permission denied!",Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    fun getCurrentLocation(){
+        locationManager= requireActivity().getSystemService(Context.LOCATION_SERVICE) as LocationManager
+
+
+        locationListener = object :LocationListener{
+
+            override fun onLocationChanged(location: Location) {
+
+                currentLatitude=location.latitude
+                currentLongitude=location.longitude
+
+            }
+
+        }
+
+        if(ContextCompat.checkSelfPermission(requireActivity().applicationContext,android.Manifest.permission.ACCESS_FINE_LOCATION)!=PackageManager.PERMISSION_GRANTED){
+            if(ActivityCompat.shouldShowRequestPermissionRationale(requireActivity(),android.Manifest.permission.ACCESS_FINE_LOCATION)){
+                Snackbar.make(requireView(),"Permission needed for location",Snackbar.LENGTH_INDEFINITE).setAction("Give Permission"){
+                    //request permission
+                    permissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
+                }.show()
+            }else{
+
+                //request permission
+                permissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
+            }
+        }else{
+            //permission granted
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,10000,0f,locationListener)
+        }
+
+        //locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,10000,0f,locationListener)
     }
 
 
@@ -57,7 +133,7 @@ class HomeFragment : Fragment() {
             .build().create(EarthquakeAPI::class.java)
 
         println("enqueue öncesi")
-        compositeDisposable?.add(retrofit.getData()
+        compositeDisposable?.add(retrofit.getCurrentLocationData("35","28","2023-01-24","2023-01-26")
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe(this::handleResponse))
@@ -96,6 +172,7 @@ class HomeFragment : Fragment() {
 
     private fun handleResponse(response:NestedJSONModel){
         response?.let {
+            println(response.metadata.url)
             println(response.features.get(0).properties.place)
             println(response.features.get(0).properties.mag)
             println(response.features.get(0).properties.time)
