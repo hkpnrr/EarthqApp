@@ -31,6 +31,8 @@ import kotlinx.android.synthetic.main.fragment_home.*
 import retrofit2.Retrofit
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory
 import retrofit2.converter.gson.GsonConverterFactory
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 
 class HomeFragment : Fragment() {
@@ -46,6 +48,9 @@ class HomeFragment : Fragment() {
 
     private var currentLatitude:Double?=null
     private var currentLongitude:Double?=null
+
+    private var startDate:String?=null
+    private var endDate:String?=null
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
 
@@ -97,6 +102,9 @@ class HomeFragment : Fragment() {
                         .addOnSuccessListener { location ->
                             currentLatitude=location.latitude
                             currentLongitude=location.longitude
+                            val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+                            endDate = LocalDateTime.now().format(formatter)
+                            startDate = LocalDateTime.now().minusDays(7).format(formatter)
 
                             println(currentLatitude)
                             println(currentLongitude)
@@ -138,6 +146,9 @@ class HomeFragment : Fragment() {
                 .addOnSuccessListener { location ->
                     currentLatitude=location.latitude
                     currentLongitude=location.longitude
+                    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+                    endDate = LocalDateTime.now().format(formatter)
+                    startDate = LocalDateTime.now().minusDays(7).format(formatter)
 
                     println(currentLatitude)
                     println(currentLongitude)
@@ -162,8 +173,8 @@ class HomeFragment : Fragment() {
             .addConverterFactory(GsonConverterFactory.create())
             .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
             .build().create(EarthquakeAPI::class.java)
-
-        compositeDisposable?.add(retrofit.getCurrentLocationData(currentLatitude.toString(),currentLongitude.toString(),"2022-01-24","2023-01-26")
+//"2022-01-24","2023-01-26"
+        compositeDisposable?.add(retrofit.getCurrentLocationData(currentLatitude.toString(),currentLongitude.toString(),startDate.toString(),endDate.toString())
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe(this::handleResponse))
