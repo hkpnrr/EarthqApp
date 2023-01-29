@@ -14,5 +14,5 @@
         android:id="@+id/homeFragment"
         android:name="com.halilakpinar.earthqapp.HomeFragment"
         android:label="fragment_home2"
-        tools:layout="@layout/fragment_home2" />
+        tools:layout="@layout/fragment_home" />
 </navigation>
