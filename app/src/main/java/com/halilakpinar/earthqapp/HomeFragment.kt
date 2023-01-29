@@ -26,15 +26,19 @@ import com.halilakpinar.earthqapp.Model.NestedJSONModel
 import com.halilakpinar.earthqapp.Service.EarthquakeAPI
 import com.halilakpinar.earthqapp.Settings.Constants.BASE_URL
 import com.halilakpinar.earthqapp.Settings.Constants.DATE_INTERVAL
+import com.halilakpinar.earthqapp.Settings.Constants.TIME_OUT
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
+import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.fragment_home.*
+import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory
 import retrofit2.converter.gson.GsonConverterFactory
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.concurrent.TimeUnit
 
 
 class HomeFragment : Fragment() {
@@ -72,6 +76,7 @@ class HomeFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        showProgressBar()
         compositeDisposable= CompositeDisposable()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
 
@@ -164,10 +169,29 @@ class HomeFragment : Fragment() {
         //locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,10000,0f,locationListener)
     }
 
+    fun showProgressBar(){
+        progressBar.visibility=View.VISIBLE
+        floatingActionButton.visibility=View.GONE
+
+    }
+
+    fun hideProgressBar(){
+        progressBar.visibility=View.GONE
+        floatingActionButton.visibility=View.VISIBLE
+
+    }
+
     fun loadData(){
+
+        val okHttpClient = OkHttpClient.Builder()
+            .connectTimeout(TIME_OUT.toLong(), TimeUnit.SECONDS)
+            .readTimeout(TIME_OUT.toLong(), TimeUnit.SECONDS)
+            .writeTimeout(TIME_OUT.toLong(), TimeUnit.SECONDS)
+            .build()
 
         val retrofit=Retrofit.Builder()
             .baseUrl(BASE_URL)
+            .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
             .build().create(EarthquakeAPI::class.java)
@@ -210,6 +234,7 @@ class HomeFragment : Fragment() {
 
     private fun handleResponse(response:NestedJSONModel){
         response?.let {
+            hideProgressBar()
             println(response.metadata.url)
             println(response.features.get(0).properties.place)
             println(response.features.get(0).properties.mag)
