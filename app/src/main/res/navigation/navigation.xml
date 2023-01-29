@@ -14,5 +14,18 @@
         android:id="@+id/homeFragment"
         android:name="com.halilakpinar.earthqapp.HomeFragment"
         android:label="fragment_home2"
-        tools:layout="@layout/fragment_home" />
+        tools:layout="@layout/fragment_home" >
+        <action
+            android:id="@+id/action_homeFragment_to_homeMapFragment"
+            app:destination="@id/homeMapFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/homeMapFragment"
+        android:name="com.halilakpinar.earthqapp.HomeMapFragment"
+        android:label="fragment_home_map"
+        tools:layout="@layout/fragment_home_map" >
+        <action
+            android:id="@+id/action_homeMapFragment_to_homeFragment"
+            app:destination="@id/homeFragment" />
+    </fragment>
 </navigation>
