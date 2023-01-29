@@ -2,7 +2,6 @@ package com.halilakpinar.earthqapp
 
 import android.content.Context
 import android.content.pm.PackageManager
-import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
 import androidx.fragment.app.Fragment
@@ -25,6 +24,8 @@ import com.google.android.material.snackbar.Snackbar
 import com.halilakpinar.earthqapp.Adapter.RecyclerViewAdapter
 import com.halilakpinar.earthqapp.Model.NestedJSONModel
 import com.halilakpinar.earthqapp.Service.EarthquakeAPI
+import com.halilakpinar.earthqapp.Settings.Constants.BASE_URL
+import com.halilakpinar.earthqapp.Settings.Constants.DATE_INTERVAL
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
@@ -38,12 +39,9 @@ import java.time.format.DateTimeFormatter
 
 class HomeFragment : Fragment() {
 
-    private val BASE_URL="https://earthquake.usgs.gov/fdsnws/event/1/"
     private var compositeDisposable:CompositeDisposable?=null
 
-
     private lateinit var locationManager:LocationManager
-    private lateinit var locationListener: LocationListener
 
     private lateinit var permissionLauncher:ActivityResultLauncher<String>
 
@@ -80,23 +78,22 @@ class HomeFragment : Fragment() {
         val layoutManager: RecyclerView.LayoutManager=LinearLayoutManager(requireContext())
         recyclerView.layoutManager=layoutManager
 
-
         registerLauncher()
 
         getCurrentLocation()
-
 
         floatingActionButton.setOnClickListener {
             val action = HomeFragmentDirections.actionHomeFragmentToHomeMapFragment()
             Navigation.findNavController(it).navigate(action)
         }
 
-
-
     }
 
-
-
+    private fun getCurrentTime(){
+        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+        endDate = LocalDateTime.now().format(formatter)
+        startDate = LocalDateTime.now().minusDays(DATE_INTERVAL.toLong()).format(formatter)
+    }
     fun registerLauncher(){
 
         permissionLauncher=registerForActivityResult(ActivityResultContracts.RequestPermission()){ result->
@@ -109,9 +106,7 @@ class HomeFragment : Fragment() {
                         .addOnSuccessListener { location ->
                             currentLatitude=location.latitude
                             currentLongitude=location.longitude
-                            val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
-                            endDate = LocalDateTime.now().format(formatter)
-                            startDate = LocalDateTime.now().minusDays(7).format(formatter)
+                            getCurrentTime()
 
                             println(currentLatitude)
                             println(currentLongitude)
@@ -134,7 +129,6 @@ class HomeFragment : Fragment() {
     fun getCurrentLocation(){
         locationManager= requireActivity().getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
-
         if(ContextCompat.checkSelfPermission(requireActivity().applicationContext,android.Manifest.permission.ACCESS_FINE_LOCATION)!=PackageManager.PERMISSION_GRANTED){
             if(ActivityCompat.shouldShowRequestPermissionRationale(requireActivity(),android.Manifest.permission.ACCESS_FINE_LOCATION)){
                 Snackbar.make(requireView(),"Permission needed for location",Snackbar.LENGTH_INDEFINITE).setAction("Give Permission"){
@@ -153,10 +147,9 @@ class HomeFragment : Fragment() {
                 .addOnSuccessListener { location ->
                     currentLatitude=location.latitude
                     currentLongitude=location.longitude
-                    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
-                    endDate = LocalDateTime.now().format(formatter)
-                    startDate = LocalDateTime.now().minusDays(7).format(formatter)
+                    getCurrentTime()
 
+                    println(startDate+" start date")
                     println(currentLatitude)
                     println(currentLongitude)
                     loadData()
@@ -170,8 +163,6 @@ class HomeFragment : Fragment() {
 
         //locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,10000,0f,locationListener)
     }
-
-
 
     fun loadData(){
 

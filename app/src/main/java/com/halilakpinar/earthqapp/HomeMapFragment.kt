@@ -33,6 +33,8 @@ import com.google.android.material.snackbar.Snackbar
 import com.halilakpinar.earthqapp.Model.FeaturesModel
 import com.halilakpinar.earthqapp.Model.NestedJSONModel
 import com.halilakpinar.earthqapp.Service.EarthquakeAPI
+import com.halilakpinar.earthqapp.Settings.Constants.BASE_URL
+import com.halilakpinar.earthqapp.Settings.Constants.DATE_INTERVAL
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
@@ -47,7 +49,7 @@ import java.time.format.DateTimeFormatter
 class HomeMapFragment : Fragment() {
 
     private lateinit var mapFragment: SupportMapFragment
-    private val BASE_URL="https://earthquake.usgs.gov/fdsnws/event/1/"
+
     private var compositeDisposable: CompositeDisposable?=null
     private lateinit var locationManager:LocationManager
     private lateinit var locationListener: LocationListener
@@ -86,7 +88,9 @@ class HomeMapFragment : Fragment() {
                         val sdf = SimpleDateFormat("dd/MM/yy hh:mm a")
                         val date =sdf.format(feature.properties.time)
                         setTitle(feature.properties.place)
-                        setMessage("Magnitude: "+feature.properties.mag+"\n"+"Time: "+date+"\n"+"Coordinates: "+feature.geometry.coordinates[0].toString()+" "+feature.geometry.coordinates[1].toString()+"\n"+"Alert Level : "+feature.properties.alert)
+                        setMessage("Magnitude: "+feature.properties.mag+"\n"+"Time: "+date+"\n"+
+                                "Coordinates: "+feature.geometry.coordinates[0].toString()+" "+feature.geometry.coordinates[1].toString()+"\n"+
+                                "Alert Level : "+feature.properties.alert)
                         /*setPositiveButton("OK", DialogInterface.OnClickListener(function = positiveButtonClick))
                         setNegativeButton(android.R.string.no, negativeButtonClick)
                         setNeutralButton("Maybe", neutralButtonClick)*/
@@ -95,7 +99,7 @@ class HomeMapFragment : Fragment() {
                 }
             }
 
-            Toast.makeText(requireContext(),it.title,Toast.LENGTH_SHORT).show()
+            //Toast.makeText(requireContext(),it.title,Toast.LENGTH_SHORT).show()
 
             return@setOnMarkerClickListener false
         }
@@ -118,10 +122,17 @@ class HomeMapFragment : Fragment() {
         floatingActionButton2.setOnClickListener {
             val action = HomeMapFragmentDirections.actionHomeMapFragmentToHomeFragment()
             Navigation.findNavController(it).navigate(action)
+
         }
         registerLauncher()
         getCurrentLocation()
 
+    }
+
+    private fun getCurrentTime(){
+        val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+        endDate = LocalDateTime.now().format(formatter)
+        startDate = LocalDateTime.now().minusDays(DATE_INTERVAL.toLong()).format(formatter)
     }
 
     fun getCurrentLocation(){
@@ -145,9 +156,7 @@ class HomeMapFragment : Fragment() {
                 .addOnSuccessListener { location ->
                     currentLatitude=location.latitude
                     currentLongitude=location.longitude
-                    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
-                    endDate = LocalDateTime.now().format(formatter)
-                    startDate = LocalDateTime.now().minusDays(7).format(formatter)
+                    getCurrentTime()
 
                     println(currentLatitude)
                     println(currentLongitude)
@@ -175,9 +184,7 @@ class HomeMapFragment : Fragment() {
                         .addOnSuccessListener { location ->
                             currentLatitude=location.latitude
                             currentLongitude=location.longitude
-                            val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
-                            endDate = LocalDateTime.now().format(formatter)
-                            startDate = LocalDateTime.now().minusDays(7).format(formatter)
+                            getCurrentTime()
 
                             println(currentLatitude)
                             println(currentLongitude)
