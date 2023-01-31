@@ -19,6 +19,14 @@ interface EarthquakeAPI {
     @Query("starttime") startTime:String,
     @Query("endtime") endTime:String):Observable<NestedJSONModel>
 
+    @GET("query?format=geojson")
+    fun getSearchEarthquakes(@Query("latitude") latitude:String,
+                               @Query("longitude") longitude:String,
+                               @Query("starttime") startTime:String,
+                               @Query("endtime") endTime:String,
+                               @Query("maxradiuskm") radius:String,
+                               @Query("minmagnitude") magnitude:String):Observable<NestedJSONModel>
+
     @GET("query?")
     fun getCurrentLocationData2(@Query("format") format:String,
                                @Query("starttime") startTime:String,

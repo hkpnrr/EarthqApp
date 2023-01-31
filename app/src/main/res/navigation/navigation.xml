@@ -3,13 +3,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/navigation"
-    app:startDestination="@id/settingsFragment">
+    app:startDestination="@id/homeFragment">
 
-    <fragment
-        android:id="@+id/settingsFragment"
-        android:name="com.halilakpinar.earthqapp.SettingsFragment"
-        android:label="fragment_settings"
-        tools:layout="@layout/fragment_settings" />
     <fragment
         android:id="@+id/homeFragment"
         android:name="com.halilakpinar.earthqapp.HomeFragment"
@@ -28,4 +23,9 @@
             android:id="@+id/action_homeMapFragment_to_homeFragment"
             app:destination="@id/homeFragment" />
     </fragment>
+    <fragment
+        android:id="@+id/searchFragment"
+        android:name="com.halilakpinar.earthqapp.SearchFragment"
+        android:label="fragment_search"
+        tools:layout="@layout/fragment_search" />
 </navigation>
