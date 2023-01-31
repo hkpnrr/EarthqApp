@@ -1,14 +1,10 @@
 package com.halilakpinar.earthqapp
 
 import android.annotation.SuppressLint
-import android.content.Context
-import android.content.DialogInterface
 import android.content.pm.PackageManager
-import android.location.LocationListener
-import android.location.LocationManager
 import androidx.fragment.app.Fragment
-
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -22,7 +18,6 @@ import androidx.navigation.Navigation
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationServices
-
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
@@ -33,7 +28,6 @@ import com.google.android.material.snackbar.Snackbar
 import com.halilakpinar.earthqapp.Model.FeaturesModel
 import com.halilakpinar.earthqapp.Model.NestedJSONModel
 import com.halilakpinar.earthqapp.Service.EarthquakeAPI
-import com.halilakpinar.earthqapp.Settings.Constants
 import com.halilakpinar.earthqapp.Settings.Constants.BASE_URL
 import com.halilakpinar.earthqapp.Settings.Constants.DATE_INTERVAL
 import com.halilakpinar.earthqapp.Settings.Constants.TIME_OUT
@@ -56,8 +50,6 @@ class HomeMapFragment : Fragment() {
     private lateinit var mapFragment: SupportMapFragment
 
     private var compositeDisposable: CompositeDisposable?=null
-    private lateinit var locationManager:LocationManager
-    private lateinit var locationListener: LocationListener
     private lateinit var permissionLauncher: ActivityResultLauncher<String>
 
     private var currentLatitude:Double?=null
@@ -80,9 +72,7 @@ class HomeMapFragment : Fragment() {
             googleMap.addMarker(MarkerOptions().position(LatLng(feature.geometry.coordinates[1],feature.geometry.coordinates[0])).title(feature.id))
             println(feature.properties.place)
         }
-        //googleMap.addMarker(MarkerOptions().position(LatLng(37.0,27.0)).title("User1"))
-        //googleMap.addMarker(MarkerOptions().position(LatLng(36.0,25.0)).title("User2"))
-        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(userLocation,7f))
+        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(userLocation,4f))
 
         googleMap.setOnMarkerClickListener {
             val builder = AlertDialog.Builder(requireContext())
@@ -96,15 +86,11 @@ class HomeMapFragment : Fragment() {
                         setMessage("Magnitude: "+feature.properties.mag+"\n"+"Time: "+date+"\n"+
                                 "Coordinates: "+feature.geometry.coordinates[0].toString()+" "+feature.geometry.coordinates[1].toString()+"\n"+
                                 "Alert Level : "+feature.properties.alert)
-                        /*setPositiveButton("OK", DialogInterface.OnClickListener(function = positiveButtonClick))
-                        setNegativeButton(android.R.string.no, negativeButtonClick)
-                        setNeutralButton("Maybe", neutralButtonClick)*/
+
                         show()
                     }
                 }
             }
-
-            //Toast.makeText(requireContext(),it.title,Toast.LENGTH_SHORT).show()
 
             return@setOnMarkerClickListener false
         }
@@ -143,7 +129,6 @@ class HomeMapFragment : Fragment() {
     }
 
     fun getCurrentLocation(){
-        locationManager= requireActivity().getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
         if(ContextCompat.checkSelfPermission(requireActivity().applicationContext,android.Manifest.permission.ACCESS_FINE_LOCATION)!= PackageManager.PERMISSION_GRANTED){
             if(ActivityCompat.shouldShowRequestPermissionRationale(requireActivity(),android.Manifest.permission.ACCESS_FINE_LOCATION)){
@@ -158,7 +143,6 @@ class HomeMapFragment : Fragment() {
             }
         }else{
             //permission granted
-            //locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,10000,0f,locationListener)
             fusedLocationClient.getCurrentLocation(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY, CancellationTokenSource().token)
                 .addOnSuccessListener { location ->
                     currentLatitude=location.latitude
@@ -175,8 +159,6 @@ class HomeMapFragment : Fragment() {
                     Toast.makeText(requireContext(),exception.localizedMessage, Toast.LENGTH_LONG).show()
                 }
         }
-
-        //locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,10000,0f,locationListener)
     }
 
     fun registerLauncher(){
@@ -185,7 +167,7 @@ class HomeMapFragment : Fragment() {
             if(result){
                 //permission granted
                 if(ContextCompat.checkSelfPermission(requireActivity().applicationContext,android.Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED){
-                    //locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,10000,0f,locationListener)
+
 
                     fusedLocationClient.getCurrentLocation(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY, CancellationTokenSource().token)
                         .addOnSuccessListener { location ->
@@ -239,46 +221,28 @@ class HomeMapFragment : Fragment() {
         compositeDisposable?.add(retrofit.getCurrentLocationData(currentLatitude.toString(),currentLongitude.toString(),startDate.toString(),endDate.toString())
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
-            .subscribe(this::handleResponse))
+            .subscribe({handleResponse(it)},{handleError(it)}))
+    }
 
-        /*
-        val service = retrofit.create(EarthquakeAPI::class.java)
-        val call = service.getData()
-
-        println("enqueue öncesi")
-        call.enqueue(object :Callback<NestedJSONModel>{
-            override fun onResponse(
-                call: Call<NestedJSONModel>,
-                response: Response<NestedJSONModel>
-            ) {
-                if(response.isSuccessful){
-                    response.body()?.let {
-
-                        println(it.features.get(0).properties.place)
-                        println(it.features.get(0).properties.mag)
-                        println(it.features.get(0).properties.time)
-
-                    }
-                }
-            }
-
-            override fun onFailure(call: Call<NestedJSONModel>, t: Throwable) {
-                println(t.localizedMessage)
-            }
-
-        })
-        println("enqueue sonrası")
-        */
-
+    private fun handleError(t: Throwable) {
+        Log.d("handleError", "Error: $t")
+        Toast.makeText(requireContext(),"Unexpected Error! Please try again. Error: "+t.localizedMessage,Toast.LENGTH_LONG).show()
     }
 
     private fun handleResponse(response: NestedJSONModel){
         response?.let {
             hideProgressBar()
             println(response.metadata.url)
-            println(response.features.get(0).properties.place)
-            println(response.features.get(0).properties.mag)
-            println(response.features.get(0).properties.time)
+            if(response.features.isNotEmpty()){
+                println(response.metadata.url)
+                println(response.features.get(0).properties.place)
+                println(response.features.get(0).properties.mag)
+                println(response.features.get(0).properties.time)
+            }
+            else{
+                Toast.makeText(requireContext(),"Not Found Any Earthquake",Toast.LENGTH_LONG).show()
+
+            }
             println(currentLatitude)
             println(currentLongitude)
             dataList=response

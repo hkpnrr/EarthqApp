@@ -1,9 +1,8 @@
 package com.halilakpinar.earthqapp
 
-import android.content.Context
 import android.content.pm.PackageManager
-import android.location.LocationManager
 import android.os.Bundle
+import android.util.Log
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
@@ -30,7 +29,6 @@ import com.halilakpinar.earthqapp.Settings.Constants.TIME_OUT
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
-import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.fragment_home.*
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
@@ -44,8 +42,6 @@ import java.util.concurrent.TimeUnit
 class HomeFragment : Fragment() {
 
     private var compositeDisposable:CompositeDisposable?=null
-
-    private lateinit var locationManager:LocationManager
 
     private lateinit var permissionLauncher:ActivityResultLauncher<String>
 
@@ -105,7 +101,7 @@ class HomeFragment : Fragment() {
             if(result){
                 //permission granted
                 if(ContextCompat.checkSelfPermission(requireActivity().applicationContext,android.Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED){
-                    //locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,10000,0f,locationListener)
+
 
                     fusedLocationClient.getCurrentLocation(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY, CancellationTokenSource().token)
                         .addOnSuccessListener { location ->
@@ -132,7 +128,6 @@ class HomeFragment : Fragment() {
     }
 
     fun getCurrentLocation(){
-        locationManager= requireActivity().getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
         if(ContextCompat.checkSelfPermission(requireActivity().applicationContext,android.Manifest.permission.ACCESS_FINE_LOCATION)!=PackageManager.PERMISSION_GRANTED){
             if(ActivityCompat.shouldShowRequestPermissionRationale(requireActivity(),android.Manifest.permission.ACCESS_FINE_LOCATION)){
@@ -147,7 +142,6 @@ class HomeFragment : Fragment() {
             }
         }else{
             //permission granted
-            //locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,10000,0f,locationListener)
             fusedLocationClient.getCurrentLocation(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY, CancellationTokenSource().token)
                 .addOnSuccessListener { location ->
                     currentLatitude=location.latitude
@@ -166,7 +160,6 @@ class HomeFragment : Fragment() {
                 }
         }
 
-        //locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,10000,0f,locationListener)
     }
 
     fun showProgressBar(){
@@ -199,46 +192,27 @@ class HomeFragment : Fragment() {
         compositeDisposable?.add(retrofit.getCurrentLocationData(currentLatitude.toString(),currentLongitude.toString(),startDate.toString(),endDate.toString())
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
-            .subscribe(this::handleResponse))
-
-        /*
-        val service = retrofit.create(EarthquakeAPI::class.java)
-        val call = service.getData()
-
-        println("enqueue öncesi")
-        call.enqueue(object :Callback<NestedJSONModel>{
-            override fun onResponse(
-                call: Call<NestedJSONModel>,
-                response: Response<NestedJSONModel>
-            ) {
-                if(response.isSuccessful){
-                    response.body()?.let {
-
-                        println(it.features.get(0).properties.place)
-                        println(it.features.get(0).properties.mag)
-                        println(it.features.get(0).properties.time)
-
-                    }
-                }
-            }
-
-            override fun onFailure(call: Call<NestedJSONModel>, t: Throwable) {
-                println(t.localizedMessage)
-            }
-
-        })
-        println("enqueue sonrası")
-        */
+            .subscribe({handleResponse(it)},{handleError(it)}))
 
     }
 
+    private fun handleError(t: Throwable) {
+        Log.d("handleError", "Error: $t")
+        Toast.makeText(requireContext(),"Unexpected Error! Please try again. Error: "+t.localizedMessage,Toast.LENGTH_LONG).show()
+    }
     private fun handleResponse(response:NestedJSONModel){
         response?.let {
             hideProgressBar()
-            println(response.metadata.url)
-            println(response.features.get(0).properties.place)
-            println(response.features.get(0).properties.mag)
-            println(response.features.get(0).properties.time)
+            if(response.features.isNotEmpty()){
+                println(response.metadata.url)
+                println(response.features.get(0).properties.place)
+                println(response.features.get(0).properties.mag)
+                println(response.features.get(0).properties.time)
+            }
+            else{
+                Toast.makeText(requireContext(),"Not Found Any Earthquake",Toast.LENGTH_LONG).show()
+            }
+
             println(currentLatitude)
             println(currentLongitude)
 

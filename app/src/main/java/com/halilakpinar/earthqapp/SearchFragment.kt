@@ -1,17 +1,14 @@
 package com.halilakpinar.earthqapp
 
-import android.location.LocationListener
-import android.location.LocationManager
 import androidx.fragment.app.Fragment
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.activity.result.ActivityResultLauncher
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
-import com.google.android.gms.location.FusedLocationProviderClient
-
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
@@ -25,7 +22,6 @@ import com.halilakpinar.earthqapp.Settings.Constants
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
-import kotlinx.android.synthetic.main.fragment_home_map.*
 import kotlinx.android.synthetic.main.fragment_home_map.progressBarMap
 import kotlinx.android.synthetic.main.fragment_search.*
 import okhttp3.OkHttpClient
@@ -34,7 +30,6 @@ import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory
 import retrofit2.converter.gson.GsonConverterFactory
 import java.text.SimpleDateFormat
 import java.time.LocalDate
-import java.util.*
 import java.util.concurrent.TimeUnit
 
 class SearchFragment : Fragment() , GoogleMap.OnMapLongClickListener{
@@ -43,9 +38,6 @@ class SearchFragment : Fragment() , GoogleMap.OnMapLongClickListener{
     private lateinit var mMap: GoogleMap
 
     private var compositeDisposable: CompositeDisposable?=null
-    private lateinit var locationManager: LocationManager
-    private lateinit var locationListener: LocationListener
-    private lateinit var permissionLauncher: ActivityResultLauncher<String>
 
     private var selectedLatitude:Double?=null
     private var selectedLongitude:Double?=null
@@ -58,30 +50,26 @@ class SearchFragment : Fragment() , GoogleMap.OnMapLongClickListener{
 
     private lateinit var dataList: NestedJSONModel
 
-    private lateinit var fusedLocationClient: FusedLocationProviderClient
-
     private val callback = OnMapReadyCallback { googleMap ->
 
         mMap=googleMap
         googleMap.setOnMapLongClickListener(this)
         val center = LatLng(0.0, 0.0)
-        //googleMap.addMarker(MarkerOptions().position(sydney).title("Marker in Sydney"))
         googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(center,1f))
     }
 
-    private val callback2 = OnMapReadyCallback { googleMap ->
+    private val callbackSearch = OnMapReadyCallback { googleMap ->
 
         mMap=googleMap
         googleMap.setOnMapLongClickListener(this)
-        val center = LatLng(0.0, 0.0)
-        //googleMap.addMarker(MarkerOptions().position(sydney).title("Marker in Sydney"))
-        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(center,1f))
 
+        if(dataList.features.isEmpty()){
+            Toast.makeText(requireContext(),"Not Found Any Earthquake",Toast.LENGTH_LONG).show()
+        }
         for (feature: FeaturesModel in dataList.features){
             googleMap.addMarker(MarkerOptions().position(LatLng(feature.geometry.coordinates[1],feature.geometry.coordinates[0])).title(feature.id))
             println(feature.properties.place)
         }
-
 
         googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(selectedLatitude!!,
             selectedLongitude!!
@@ -99,15 +87,11 @@ class SearchFragment : Fragment() , GoogleMap.OnMapLongClickListener{
                         setMessage("Magnitude: "+feature.properties.mag+"\n"+"Time: "+date+"\n"+
                                 "Coordinates: "+feature.geometry.coordinates[0].toString()+" "+feature.geometry.coordinates[1].toString()+"\n"+
                                 "Alert Level : "+feature.properties.alert)
-                        /*setPositiveButton("OK", DialogInterface.OnClickListener(function = positiveButtonClick))
-                        setNegativeButton(android.R.string.no, negativeButtonClick)
-                        setNeutralButton("Maybe", neutralButtonClick)*/
+
                         show()
                     }
                 }
             }
-
-            //Toast.makeText(requireContext(),it.title,Toast.LENGTH_SHORT).show()
 
             return@setOnMarkerClickListener false
         }
@@ -115,7 +99,7 @@ class SearchFragment : Fragment() , GoogleMap.OnMapLongClickListener{
 
     override fun onMapLongClick(p0: LatLng) {
         mMap.clear()
-        mMap.addMarker(MarkerOptions().position(p0))
+        mMap.addMarker(MarkerOptions().position(p0).title("Selected Area"))
         selectedLatitude=p0.latitude
         selectedLongitude=p0.longitude
     }
@@ -190,7 +174,12 @@ class SearchFragment : Fragment() , GoogleMap.OnMapLongClickListener{
         selectedRadius.toString(),selectedMagnitude.toString())
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
-            .subscribe(this::handleResponse))
+            .subscribe({handleResponse(it)},{handleError(it)}))
+    }
+
+    private fun handleError(t: Throwable) {
+        Log.d("handleError", "Error: $t")
+        Toast.makeText(requireContext(),"Unexpected Error! Please try again. Error: "+t.localizedMessage,Toast.LENGTH_LONG).show()
     }
 
     fun showProgressBar(){
@@ -206,14 +195,16 @@ class SearchFragment : Fragment() , GoogleMap.OnMapLongClickListener{
     private fun handleResponse(response: NestedJSONModel){
         response?.let {
             hideProgressBar()
+            if(response.features.isNotEmpty()){
+                println(response.features.get(0).properties.place)
+                println(response.features.get(0).properties.mag)
+                println(response.features.get(0).properties.time)
+            }
             println(response.metadata.url)
-            println(response.features.get(0).properties.place)
-            println(response.features.get(0).properties.mag)
-            println(response.features.get(0).properties.time)
             println(selectedLatitude)
             println(selectedLongitude)
             dataList=response
-            mapFragment?.getMapAsync(callback2)
+            mapFragment?.getMapAsync(callbackSearch)
 
         }
 
