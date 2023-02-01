@@ -25,14 +25,9 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.android.material.snackbar.Snackbar
-import com.halilakpinar.earthqapp.Adapter.RecyclerViewAdapter
 import com.halilakpinar.earthqapp.Model.AfadEarthquake
-import com.halilakpinar.earthqapp.Model.FeaturesModel
-import com.halilakpinar.earthqapp.Model.NestedJSONModel
 import com.halilakpinar.earthqapp.Service.AfadAPI
-import com.halilakpinar.earthqapp.Service.EarthquakeAPI
 import com.halilakpinar.earthqapp.Settings.Constants
-import com.halilakpinar.earthqapp.Settings.Constants.BASE_URL
 import com.halilakpinar.earthqapp.Settings.Constants.COORDINATE_INTERVAL
 import com.halilakpinar.earthqapp.Settings.Constants.DATE_INTERVAL
 import com.halilakpinar.earthqapp.Settings.Constants.TIME_OUT
@@ -45,7 +40,6 @@ import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory
 import retrofit2.converter.gson.GsonConverterFactory
-import java.text.SimpleDateFormat
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.TimeUnit
@@ -53,23 +47,17 @@ import java.util.concurrent.TimeUnit
 class HomeMapFragment : Fragment() {
 
     private lateinit var mapFragment: SupportMapFragment
-
     private var compositeDisposable: CompositeDisposable?=null
     private lateinit var permissionLauncher: ActivityResultLauncher<String>
-
     private var currentLatitude:Double?=null
     private var currentLongitude:Double?=null
     private var minLatitude:Double?=null
     private var minLongitude:Double?=null
     private var maxLatitude:Double?=null
     private var maxLongitude:Double?=null
-
     private var startDate:String?=null
     private var endDate:String?=null
-
-    private lateinit var dataList: NestedJSONModel
-    private lateinit var dataListAfad: List<AfadEarthquake>
-
+    private lateinit var dataList: List<AfadEarthquake>
     private lateinit var fusedLocationClient: FusedLocationProviderClient
 
     @SuppressLint("MissingPermission")
@@ -78,54 +66,17 @@ class HomeMapFragment : Fragment() {
         val userLocation = LatLng(currentLatitude!!, currentLongitude!!)
         googleMap.isMyLocationEnabled=true
 
-        for (feature:FeaturesModel in dataList.features){
-            googleMap.addMarker(MarkerOptions().position(LatLng(feature.geometry.coordinates[1],feature.geometry.coordinates[0])).title(feature.id))
-            println(feature.properties.place)
-        }
-        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(userLocation,4f))
-
-        googleMap.setOnMarkerClickListener {
-            val builder = AlertDialog.Builder(requireContext())
-            for (feature:FeaturesModel in dataList.features){
-                if(feature.id == it.title){
-                    with(builder)
-                    {
-                        val sdf = SimpleDateFormat("dd/MM/yy hh:mm a")
-                        val date =sdf.format(feature.properties.time)
-                        setTitle(feature.properties.place)
-                        setMessage("Magnitude: "+feature.properties.mag+"\n"+"Time: "+date+"\n"+
-                                "Coordinates: "+feature.geometry.coordinates[0].toString()+" "+feature.geometry.coordinates[1].toString()+"\n"+
-                                "Alert Level : "+feature.properties.alert)
-
-                        show()
-                    }
-                }
-            }
-
-            return@setOnMarkerClickListener false
-        }
-    }
-
-    @SuppressLint("MissingPermission")
-    private val callbackAfad = OnMapReadyCallback { googleMap ->
-
-        val userLocation = LatLng(currentLatitude!!, currentLongitude!!)
-        googleMap.isMyLocationEnabled=true
-
-        for (feature:AfadEarthquake in dataListAfad){
+        for (feature:AfadEarthquake in dataList){
             googleMap.addMarker(MarkerOptions().position(LatLng(feature.latitude.toDouble(),feature.longitude.toDouble())).title(feature.eventID))
-            println(feature.location)
         }
         googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(userLocation,4f))
 
         googleMap.setOnMarkerClickListener {
             val builder = AlertDialog.Builder(requireContext())
-            for (feature:AfadEarthquake in dataListAfad){
+            for (feature:AfadEarthquake in dataList){
                 if(feature.eventID == it.title){
                     with(builder)
                     {
-                        val sdf = SimpleDateFormat("dd/MM/yy hh:mm a")
-                        //val date =sdf.format(feature.properties.time)
                         setTitle(feature.location)
                         setMessage("Magnitude: "+feature.magnitude+"\n"+"Date: "+feature.date+"\n"+
                                 "Coordinates: "+feature.latitude+"-"+feature.longitude+"\n"+
@@ -140,7 +91,6 @@ class HomeMapFragment : Fragment() {
             return@setOnMarkerClickListener false
         }
     }
-
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -153,15 +103,17 @@ class HomeMapFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         mapFragment = (childFragmentManager.findFragmentById(R.id.map) as SupportMapFragment?)!!
+
         showProgressBar()
+
         compositeDisposable= CompositeDisposable()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
 
         floatingActionButtonMap.setOnClickListener {
             val action = HomeMapFragmentDirections.actionHomeMapFragmentToHomeFragment()
             Navigation.findNavController(it).navigate(action)
-
         }
+
         registerLauncher()
         getCurrentLocation()
 
@@ -182,7 +134,6 @@ class HomeMapFragment : Fragment() {
                     permissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
                 }.show()
             }else{
-
                 //request permission
                 permissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
             }
@@ -196,16 +147,11 @@ class HomeMapFragment : Fragment() {
                     maxLatitude= currentLatitude!! +COORDINATE_INTERVAL
                     minLongitude= currentLongitude!! -COORDINATE_INTERVAL
                     maxLongitude= currentLongitude!! +COORDINATE_INTERVAL
-                    getCurrentTime()
 
-                    println(currentLatitude)
-                    println(currentLongitude)
-                    //loadData()
-                    //loadDataAfad()
-                    loadDataAfadNew()
+                    getCurrentTime()
+                    loadData()
                 }
                 .addOnFailureListener { exception ->
-
                     Toast.makeText(requireContext(),exception.localizedMessage, Toast.LENGTH_LONG).show()
                 }
         }
@@ -226,17 +172,11 @@ class HomeMapFragment : Fragment() {
                             maxLatitude= currentLatitude!! +COORDINATE_INTERVAL
                             minLongitude= currentLongitude!! -COORDINATE_INTERVAL
                             maxLongitude= currentLongitude!! +COORDINATE_INTERVAL
+
                             getCurrentTime()
-
-                            println(currentLatitude)
-                            println(currentLongitude)
-                            //loadData()
-
-                            //loadDataAfad()
-                            loadDataAfadNew()
+                            loadData()
                         }
                         .addOnFailureListener { exception ->
-
                             Toast.makeText(requireContext(),exception.localizedMessage,Toast.LENGTH_LONG).show()
                         }
                 }
@@ -251,37 +191,16 @@ class HomeMapFragment : Fragment() {
     fun showProgressBar(){
         progressBarMap.visibility=View.VISIBLE
         floatingActionButtonMap.visibility=View.GONE
-
     }
 
     fun hideProgressBar(){
         progressBarMap.visibility=View.GONE
         floatingActionButtonMap.visibility=View.VISIBLE
-
     }
+
     fun loadData(){
 
         val okHttpClient = OkHttpClient.Builder()
-            .connectTimeout(TIME_OUT.toLong(),TimeUnit.SECONDS)
-            .readTimeout(TIME_OUT.toLong(),TimeUnit.SECONDS)
-            .writeTimeout(TIME_OUT.toLong(),TimeUnit.SECONDS)
-            .build()
-        val retrofit= Retrofit.Builder()
-            .baseUrl(BASE_URL)
-            .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create())
-            .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
-            .build().create(EarthquakeAPI::class.java)
-//"2022-01-24","2023-01-26"
-        compositeDisposable?.add(retrofit.getCurrentLocationData(currentLatitude.toString(),currentLongitude.toString(),startDate.toString(),endDate.toString())
-            .subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe({handleResponse(it)},{handleError(it)}))
-    }
-
-    fun loadDataAfad(){
-
-        val okHttpClient = OkHttpClient.Builder()
             .connectTimeout(TIME_OUT.toLong(), TimeUnit.SECONDS)
             .readTimeout(TIME_OUT.toLong(), TimeUnit.SECONDS)
             .writeTimeout(TIME_OUT.toLong(), TimeUnit.SECONDS)
@@ -293,79 +212,26 @@ class HomeMapFragment : Fragment() {
             .addConverterFactory(GsonConverterFactory.create())
             .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
             .build().create(AfadAPI::class.java)
-//"2022-01-24","2023-01-26"
-        compositeDisposable?.add(retrofit.getCurrentLocationData(currentLatitude.toString(),currentLongitude.toString(),startDate.toString(),endDate.toString())
-            .subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe({handleAfadResponse(it)},{handleError(it)}))
 
-    }
-
-    fun loadDataAfadNew(){
-
-        val okHttpClient = OkHttpClient.Builder()
-            .connectTimeout(TIME_OUT.toLong(), TimeUnit.SECONDS)
-            .readTimeout(TIME_OUT.toLong(), TimeUnit.SECONDS)
-            .writeTimeout(TIME_OUT.toLong(), TimeUnit.SECONDS)
-            .build()
-
-        val retrofit=Retrofit.Builder()
-            .baseUrl(Constants.BASE_URL_AFAD)
-            .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create())
-            .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
-            .build().create(AfadAPI::class.java)
-//"2022-01-24","2023-01-26"
         compositeDisposable?.add(retrofit.getCurrentLocationDataNew(minLatitude.toString(),maxLatitude.toString(),minLongitude.toString(),maxLongitude.toString(),startDate.toString(),endDate.toString())
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
-            .subscribe({handleAfadResponse(it)},{handleError(it)}))
+            .subscribe({handleResponse(it)},{handleError(it)}))
 
     }
 
     private fun handleError(t: Throwable) {
-        Log.d("handleError", "Error: $t")
         Toast.makeText(requireContext(),"Unexpected Error! Please try again. Error: "+t.localizedMessage,Toast.LENGTH_LONG).show()
     }
 
-    private fun handleAfadResponse(response:List<AfadEarthquake>){
+    private fun handleResponse(response:List<AfadEarthquake>){
         response?.let {
             hideProgressBar()
-            if(response.isNotEmpty()){
-                println(response.get(0).location)
-                println(response.get(0).magnitude)
-                println(response.get(0).date)
-            }
-            else{
+
+            if(response.isEmpty()){
                 Toast.makeText(requireContext(),"Not Found Any Earthquake",Toast.LENGTH_LONG).show()
             }
 
-            println(currentLatitude)
-            println(currentLongitude)
-
-            dataListAfad=response
-            mapFragment?.getMapAsync(callbackAfad)
-
-        }
-
-    }
-
-    private fun handleResponse(response: NestedJSONModel){
-        response?.let {
-            hideProgressBar()
-            println(response.metadata.url)
-            if(response.features.isNotEmpty()){
-                println(response.metadata.url)
-                println(response.features.get(0).properties.place)
-                println(response.features.get(0).properties.mag)
-                println(response.features.get(0).properties.time)
-            }
-            else{
-                Toast.makeText(requireContext(),"Not Found Any Earthquake",Toast.LENGTH_LONG).show()
-
-            }
-            println(currentLatitude)
-            println(currentLongitude)
             dataList=response
             mapFragment?.getMapAsync(callback)
 

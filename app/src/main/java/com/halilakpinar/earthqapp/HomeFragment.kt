@@ -22,11 +22,7 @@ import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.android.material.snackbar.Snackbar
 import com.halilakpinar.earthqapp.Adapter.RecyclerViewAdapter
 import com.halilakpinar.earthqapp.Model.AfadEarthquake
-import com.halilakpinar.earthqapp.Model.AfadResponse
-import com.halilakpinar.earthqapp.Model.NestedJSONModel
 import com.halilakpinar.earthqapp.Service.AfadAPI
-import com.halilakpinar.earthqapp.Service.EarthquakeAPI
-import com.halilakpinar.earthqapp.Settings.Constants.BASE_URL
 import com.halilakpinar.earthqapp.Settings.Constants.BASE_URL_AFAD
 import com.halilakpinar.earthqapp.Settings.Constants.COORDINATE_INTERVAL
 import com.halilakpinar.earthqapp.Settings.Constants.DATE_INTERVAL
@@ -47,21 +43,16 @@ import java.util.concurrent.TimeUnit
 class HomeFragment : Fragment() {
 
     private var compositeDisposable:CompositeDisposable?=null
-
     private lateinit var permissionLauncher:ActivityResultLauncher<String>
-
     private var currentLatitude:Double?=null
     private var currentLongitude:Double?=null
     private var minLatitude:Double?=null
     private var minLongitude:Double?=null
     private var maxLatitude:Double?=null
     private var maxLongitude:Double?=null
-
     private var startDate:String?=null
     private var endDate:String?=null
-
     private lateinit var fusedLocationClient: FusedLocationProviderClient
-
     private var recyclerViewAdapter:RecyclerViewAdapter?=null
 
 
@@ -81,7 +72,9 @@ class HomeFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
         showProgressBar()
+
         compositeDisposable= CompositeDisposable()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
 
@@ -89,7 +82,6 @@ class HomeFragment : Fragment() {
         recyclerView.layoutManager=layoutManager
 
         registerLauncher()
-
         getCurrentLocation()
 
         floatingActionButton.setOnClickListener {
@@ -119,17 +111,12 @@ class HomeFragment : Fragment() {
                             maxLatitude= currentLatitude!! +COORDINATE_INTERVAL
                             minLongitude= currentLongitude!! -COORDINATE_INTERVAL
                             maxLongitude= currentLongitude!! +COORDINATE_INTERVAL
-                            getCurrentTime()
 
-                            println(currentLatitude)
-                            println(currentLongitude)
-                            //loadData()
-                            //loadDataAfad()
-                            loadDataAfadNew()
+                            getCurrentTime()
+                            loadData()
 
                         }
                         .addOnFailureListener { exception ->
-
                             Toast.makeText(requireContext(),exception.localizedMessage,Toast.LENGTH_LONG).show()
                         }
                 }
@@ -150,7 +137,6 @@ class HomeFragment : Fragment() {
                     permissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
                 }.show()
             }else{
-
                 //request permission
                 permissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
             }
@@ -164,59 +150,27 @@ class HomeFragment : Fragment() {
                     maxLatitude= currentLatitude!! +COORDINATE_INTERVAL
                     minLongitude= currentLongitude!! -COORDINATE_INTERVAL
                     maxLongitude= currentLongitude!! +COORDINATE_INTERVAL
+
                     getCurrentTime()
-
-                    println(startDate+" start date")
-                    println(currentLatitude)
-                    println(currentLongitude)
-                    //loadData()
-                    //loadDataAfad()
-
-                    loadDataAfadNew()
+                    loadData()
                 }
                 .addOnFailureListener { exception ->
-
                     Toast.makeText(requireContext(),exception.localizedMessage,Toast.LENGTH_LONG).show()
                 }
         }
-
     }
 
     fun showProgressBar(){
         progressBar.visibility=View.VISIBLE
         floatingActionButton.visibility=View.GONE
-
     }
 
     fun hideProgressBar(){
         progressBar.visibility=View.GONE
         floatingActionButton.visibility=View.VISIBLE
-
     }
 
-   /* fun loadData(){
-
-        val okHttpClient = OkHttpClient.Builder()
-            .connectTimeout(TIME_OUT.toLong(), TimeUnit.SECONDS)
-            .readTimeout(TIME_OUT.toLong(), TimeUnit.SECONDS)
-            .writeTimeout(TIME_OUT.toLong(), TimeUnit.SECONDS)
-            .build()
-
-        val retrofit=Retrofit.Builder()
-            .baseUrl(BASE_URL)
-            .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create())
-            .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
-            .build().create(EarthquakeAPI::class.java)
-//"2022-01-24","2023-01-26"
-        compositeDisposable?.add(retrofit.getCurrentLocationData(currentLatitude.toString(),currentLongitude.toString(),startDate.toString(),endDate.toString())
-            .subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe({handleResponse(it)},{handleError(it)}))
-
-    }*/
-
-    fun loadDataAfad(){
+    fun loadData(){
 
         val okHttpClient = OkHttpClient.Builder()
             .connectTimeout(TIME_OUT.toLong(), TimeUnit.SECONDS)
@@ -230,84 +184,29 @@ class HomeFragment : Fragment() {
             .addConverterFactory(GsonConverterFactory.create())
             .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
             .build().create(AfadAPI::class.java)
-//"2022-01-24","2023-01-26"
-        compositeDisposable?.add(retrofit.getCurrentLocationData(currentLatitude.toString(),currentLongitude.toString(),startDate.toString(),endDate.toString())
-            .subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe({handleAfadResponse(it)},{handleError(it)}))
 
-    }
-
-    fun loadDataAfadNew(){
-
-        val okHttpClient = OkHttpClient.Builder()
-            .connectTimeout(TIME_OUT.toLong(), TimeUnit.SECONDS)
-            .readTimeout(TIME_OUT.toLong(), TimeUnit.SECONDS)
-            .writeTimeout(TIME_OUT.toLong(), TimeUnit.SECONDS)
-            .build()
-
-        val retrofit=Retrofit.Builder()
-            .baseUrl(BASE_URL_AFAD)
-            .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create())
-            .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
-            .build().create(AfadAPI::class.java)
-//"2022-01-24","2023-01-26"
         compositeDisposable?.add(retrofit.getCurrentLocationDataNew(minLatitude.toString(),maxLatitude.toString(),minLongitude.toString(),maxLongitude.toString(),startDate.toString(),endDate.toString())
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
-            .subscribe({handleAfadResponse(it)},{handleError(it)}))
-
+            .subscribe({handleResponse(it)},{handleError(it)}))
     }
 
-    private fun handleAfadResponse(response:List<AfadEarthquake>){
+    private fun handleResponse(response:List<AfadEarthquake>){
         response?.let {
             hideProgressBar()
-            if(response.isNotEmpty()){
-                println(response.get(0).location)
-                println(response.get(0).magnitude)
-                println(response.get(0).date)
-            }
-            else{
+
+            if(response.isEmpty()){
                 Toast.makeText(requireContext(),"Not Found Any Earthquake",Toast.LENGTH_LONG).show()
             }
-
-            println(currentLatitude)
-            println(currentLongitude)
 
             recyclerViewAdapter= RecyclerViewAdapter(response)
             recyclerView.adapter=recyclerViewAdapter
-
         }
-
     }
 
     private fun handleError(t: Throwable) {
-        Log.d("handleError", "Error: $t")
         Toast.makeText(requireContext(),"Unexpected Error! Please try again. Error: "+t.localizedMessage,Toast.LENGTH_LONG).show()
     }
-    /*private fun handleResponse(response:NestedJSONModel){
-        response?.let {
-            hideProgressBar()
-            if(response.features.isNotEmpty()){
-                println(response.metadata.url)
-                println(response.features.get(0).properties.place)
-                println(response.features.get(0).properties.mag)
-                println(response.features.get(0).properties.time)
-            }
-            else{
-                Toast.makeText(requireContext(),"Not Found Any Earthquake",Toast.LENGTH_LONG).show()
-            }
-
-            println(currentLatitude)
-            println(currentLongitude)
-
-            recyclerViewAdapter= RecyclerViewAdapter(response.features)
-            recyclerView.adapter=recyclerViewAdapter
-
-        }
-
-    }*/
 
     override fun onDestroy() {
         super.onDestroy()
