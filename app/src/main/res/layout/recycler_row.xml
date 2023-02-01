@@ -5,9 +5,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
     android:padding="20dp"
-    android:background="#CB319371"
+    android:background="@drawable/linearlayout_shape"
     android:layout_margin="5dp"
-
     >
 
 
