@@ -15,10 +15,13 @@ import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
+import com.halilakpinar.earthqapp.Model.AfadEarthquake
 import com.halilakpinar.earthqapp.Model.FeaturesModel
 import com.halilakpinar.earthqapp.Model.NestedJSONModel
+import com.halilakpinar.earthqapp.Service.AfadAPI
 import com.halilakpinar.earthqapp.Service.EarthquakeAPI
 import com.halilakpinar.earthqapp.Settings.Constants
+import com.halilakpinar.earthqapp.Settings.Constants.COORDINATE_INTERVAL
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
@@ -41,14 +44,20 @@ class SearchFragment : Fragment() , GoogleMap.OnMapLongClickListener{
 
     private var selectedLatitude:Double?=null
     private var selectedLongitude:Double?=null
+    private var minLatitude:Double?=null
+    private var minLongitude:Double?=null
+    private var maxLatitude:Double?=null
+    private var maxLongitude:Double?=null
+
     private var selectedDate:LocalDate?=null
-    private var selectedRadius:String?=null
     private var selectedMagnitude:String?=null
 
     private var startDate:String?=null
     private var endDate:String?=null
 
     private lateinit var dataList: NestedJSONModel
+    private lateinit var dataListAfad: List<AfadEarthquake>
+
 
     private val callback = OnMapReadyCallback { googleMap ->
 
@@ -97,11 +106,54 @@ class SearchFragment : Fragment() , GoogleMap.OnMapLongClickListener{
         }
     }
 
+    private val callbackSearchAfad = OnMapReadyCallback { googleMap ->
+
+        mMap=googleMap
+        googleMap.setOnMapLongClickListener(this)
+
+        if(dataListAfad.isEmpty()){
+            Toast.makeText(requireContext(),"Not Found Any Earthquake",Toast.LENGTH_LONG).show()
+        }
+        for (feature: AfadEarthquake in dataListAfad){
+            googleMap.addMarker(MarkerOptions().position(LatLng(feature.latitude.toDouble(),feature.longitude.toDouble())).title(feature.eventID))
+            println(feature.eventID)
+        }
+
+        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(selectedLatitude!!,
+            selectedLongitude!!
+        ),7f))
+
+        googleMap.setOnMarkerClickListener {
+            val builder = AlertDialog.Builder(requireContext())
+            for (feature:AfadEarthquake in dataListAfad){
+                if(feature.eventID == it.title){
+                    with(builder)
+                    {
+                        val sdf = SimpleDateFormat("dd/MM/yy hh:mm a")
+                        //val date =sdf.format(feature.properties.time)
+                        setTitle(feature.location)
+                        setMessage("Magnitude: "+feature.magnitude+"\n"+"Date: "+feature.date+"\n"+
+                                "Coordinates: "+feature.latitude+"-"+feature.longitude+"\n"+
+                                "Depth :"+feature.depth+" KM"+"\n"+
+                                "District :"+feature.district+"/"+feature.province)
+
+                        show()
+                    }
+                }
+            }
+
+            return@setOnMarkerClickListener false
+        }
+    }
     override fun onMapLongClick(p0: LatLng) {
         mMap.clear()
         mMap.addMarker(MarkerOptions().position(p0).title("Selected Area"))
         selectedLatitude=p0.latitude
         selectedLongitude=p0.longitude
+        minLatitude= selectedLatitude!! -COORDINATE_INTERVAL
+        maxLatitude= selectedLatitude!! +COORDINATE_INTERVAL
+        minLongitude= selectedLongitude!! -COORDINATE_INTERVAL
+        maxLongitude= selectedLongitude!! +COORDINATE_INTERVAL
     }
 
     override fun onCreateView(
@@ -136,27 +188,35 @@ class SearchFragment : Fragment() , GoogleMap.OnMapLongClickListener{
         }
 
         buttonSearch.setOnClickListener {
-            showProgressBar()
+
             searchEarthquakes()
         }
     }
 
     fun searchEarthquakes(){
-        if(editTextRadius.text.toString()!="" && editTextMagnitude.text.toString()!="" &&
+        if(editTextMagnitude.text.toString()!="" &&
             selectedDate!=null && selectedLatitude!=null && selectedLongitude!=null){
 
             selectedMagnitude=editTextMagnitude.text.toString()
-            selectedRadius=editTextRadius.text.toString()
+            println("burası "+ selectedLatitude)
+            println(selectedLongitude)
 
-            loadData()
+            //loadData()
+            //loadDataAfad()
+            showProgressBar()
 
+            loadDataAfadNew()
 
+        }
+        else{
+
+            Toast.makeText(requireContext(),"Enter inputs properly!",Toast.LENGTH_SHORT).show()
         }
     }
 
 
 
-    fun loadData(){
+    /*fun loadData(){
 
         val okHttpClient = OkHttpClient.Builder()
             .connectTimeout(Constants.TIME_OUT.toLong(), TimeUnit.SECONDS)
@@ -175,7 +235,7 @@ class SearchFragment : Fragment() , GoogleMap.OnMapLongClickListener{
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe({handleResponse(it)},{handleError(it)}))
-    }
+    }*/
 
     private fun handleError(t: Throwable) {
         Log.d("handleError", "Error: $t")
@@ -189,6 +249,72 @@ class SearchFragment : Fragment() , GoogleMap.OnMapLongClickListener{
 
     fun hideProgressBar(){
         progressBarMap.visibility=View.GONE
+
+    }
+    /*fun loadDataAfad(){
+
+        val okHttpClient = OkHttpClient.Builder()
+            .connectTimeout(Constants.TIME_OUT.toLong(), TimeUnit.SECONDS)
+            .readTimeout(Constants.TIME_OUT.toLong(), TimeUnit.SECONDS)
+            .writeTimeout(Constants.TIME_OUT.toLong(), TimeUnit.SECONDS)
+            .build()
+
+        val retrofit=Retrofit.Builder()
+            .baseUrl(Constants.BASE_URL_AFAD)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
+            .build().create(AfadAPI::class.java)
+//"2022-01-24","2023-01-26"
+        compositeDisposable?.add(retrofit.getSearchEarthquakes(selectedLatitude.toString(),selectedLongitude.toString(),startDate.toString(),endDate.toString(),
+            selectedRadius.toString(),selectedMagnitude.toString())
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe({handleAfadResponse(it)},{handleError(it)}))
+
+    }*/
+
+    fun loadDataAfadNew(){
+
+        val okHttpClient = OkHttpClient.Builder()
+            .connectTimeout(Constants.TIME_OUT.toLong(), TimeUnit.SECONDS)
+            .readTimeout(Constants.TIME_OUT.toLong(), TimeUnit.SECONDS)
+            .writeTimeout(Constants.TIME_OUT.toLong(), TimeUnit.SECONDS)
+            .build()
+
+        val retrofit=Retrofit.Builder()
+            .baseUrl(Constants.BASE_URL_AFAD)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
+            .build().create(AfadAPI::class.java)
+//"2022-01-24","2023-01-26"
+        compositeDisposable?.add(retrofit.getSearchEarthquakesNew(minLatitude.toString(),maxLatitude.toString(),minLongitude.toString(),maxLongitude.toString(),startDate.toString(),endDate.toString(), selectedMagnitude.toString())
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe({handleAfadResponse(it)},{handleError(it)}))
+
+    }
+
+    private fun handleAfadResponse(response:List<AfadEarthquake>){
+        response?.let {
+            hideProgressBar()
+            if(response.isNotEmpty()){
+                println(response.get(0).location)
+                println(response.get(0).magnitude)
+                println(response.get(0).date)
+            }
+            else{
+                Toast.makeText(requireContext(),"Not Found Any Earthquake",Toast.LENGTH_LONG).show()
+            }
+
+            println(selectedLatitude)
+            println(selectedLongitude)
+
+            dataListAfad=response
+            mapFragment?.getMapAsync(callbackSearchAfad)
+
+        }
 
     }
 
@@ -209,6 +335,8 @@ class SearchFragment : Fragment() , GoogleMap.OnMapLongClickListener{
         }
 
     }
+
+
 
     override fun onDestroy() {
         super.onDestroy()

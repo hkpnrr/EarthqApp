@@ -21,9 +21,14 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.android.material.snackbar.Snackbar
 import com.halilakpinar.earthqapp.Adapter.RecyclerViewAdapter
+import com.halilakpinar.earthqapp.Model.AfadEarthquake
+import com.halilakpinar.earthqapp.Model.AfadResponse
 import com.halilakpinar.earthqapp.Model.NestedJSONModel
+import com.halilakpinar.earthqapp.Service.AfadAPI
 import com.halilakpinar.earthqapp.Service.EarthquakeAPI
 import com.halilakpinar.earthqapp.Settings.Constants.BASE_URL
+import com.halilakpinar.earthqapp.Settings.Constants.BASE_URL_AFAD
+import com.halilakpinar.earthqapp.Settings.Constants.COORDINATE_INTERVAL
 import com.halilakpinar.earthqapp.Settings.Constants.DATE_INTERVAL
 import com.halilakpinar.earthqapp.Settings.Constants.TIME_OUT
 import io.reactivex.android.schedulers.AndroidSchedulers
@@ -47,6 +52,10 @@ class HomeFragment : Fragment() {
 
     private var currentLatitude:Double?=null
     private var currentLongitude:Double?=null
+    private var minLatitude:Double?=null
+    private var minLongitude:Double?=null
+    private var maxLatitude:Double?=null
+    private var maxLongitude:Double?=null
 
     private var startDate:String?=null
     private var endDate:String?=null
@@ -102,16 +111,21 @@ class HomeFragment : Fragment() {
                 //permission granted
                 if(ContextCompat.checkSelfPermission(requireActivity().applicationContext,android.Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED){
 
-
                     fusedLocationClient.getCurrentLocation(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY, CancellationTokenSource().token)
                         .addOnSuccessListener { location ->
                             currentLatitude=location.latitude
                             currentLongitude=location.longitude
+                            minLatitude= currentLatitude!! -COORDINATE_INTERVAL
+                            maxLatitude= currentLatitude!! +COORDINATE_INTERVAL
+                            minLongitude= currentLongitude!! -COORDINATE_INTERVAL
+                            maxLongitude= currentLongitude!! +COORDINATE_INTERVAL
                             getCurrentTime()
 
                             println(currentLatitude)
                             println(currentLongitude)
-                            loadData()
+                            //loadData()
+                            //loadDataAfad()
+                            loadDataAfadNew()
 
                         }
                         .addOnFailureListener { exception ->
@@ -146,13 +160,19 @@ class HomeFragment : Fragment() {
                 .addOnSuccessListener { location ->
                     currentLatitude=location.latitude
                     currentLongitude=location.longitude
+                    minLatitude= currentLatitude!! -COORDINATE_INTERVAL
+                    maxLatitude= currentLatitude!! +COORDINATE_INTERVAL
+                    minLongitude= currentLongitude!! -COORDINATE_INTERVAL
+                    maxLongitude= currentLongitude!! +COORDINATE_INTERVAL
                     getCurrentTime()
 
                     println(startDate+" start date")
                     println(currentLatitude)
                     println(currentLongitude)
-                    loadData()
+                    //loadData()
+                    //loadDataAfad()
 
+                    loadDataAfadNew()
                 }
                 .addOnFailureListener { exception ->
 
@@ -174,7 +194,7 @@ class HomeFragment : Fragment() {
 
     }
 
-    fun loadData(){
+   /* fun loadData(){
 
         val okHttpClient = OkHttpClient.Builder()
             .connectTimeout(TIME_OUT.toLong(), TimeUnit.SECONDS)
@@ -194,13 +214,79 @@ class HomeFragment : Fragment() {
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe({handleResponse(it)},{handleError(it)}))
 
+    }*/
+
+    fun loadDataAfad(){
+
+        val okHttpClient = OkHttpClient.Builder()
+            .connectTimeout(TIME_OUT.toLong(), TimeUnit.SECONDS)
+            .readTimeout(TIME_OUT.toLong(), TimeUnit.SECONDS)
+            .writeTimeout(TIME_OUT.toLong(), TimeUnit.SECONDS)
+            .build()
+
+        val retrofit=Retrofit.Builder()
+            .baseUrl(BASE_URL_AFAD)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
+            .build().create(AfadAPI::class.java)
+//"2022-01-24","2023-01-26"
+        compositeDisposable?.add(retrofit.getCurrentLocationData(currentLatitude.toString(),currentLongitude.toString(),startDate.toString(),endDate.toString())
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe({handleAfadResponse(it)},{handleError(it)}))
+
+    }
+
+    fun loadDataAfadNew(){
+
+        val okHttpClient = OkHttpClient.Builder()
+            .connectTimeout(TIME_OUT.toLong(), TimeUnit.SECONDS)
+            .readTimeout(TIME_OUT.toLong(), TimeUnit.SECONDS)
+            .writeTimeout(TIME_OUT.toLong(), TimeUnit.SECONDS)
+            .build()
+
+        val retrofit=Retrofit.Builder()
+            .baseUrl(BASE_URL_AFAD)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
+            .build().create(AfadAPI::class.java)
+//"2022-01-24","2023-01-26"
+        compositeDisposable?.add(retrofit.getCurrentLocationDataNew(minLatitude.toString(),maxLatitude.toString(),minLongitude.toString(),maxLongitude.toString(),startDate.toString(),endDate.toString())
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe({handleAfadResponse(it)},{handleError(it)}))
+
+    }
+
+    private fun handleAfadResponse(response:List<AfadEarthquake>){
+        response?.let {
+            hideProgressBar()
+            if(response.isNotEmpty()){
+                println(response.get(0).location)
+                println(response.get(0).magnitude)
+                println(response.get(0).date)
+            }
+            else{
+                Toast.makeText(requireContext(),"Not Found Any Earthquake",Toast.LENGTH_LONG).show()
+            }
+
+            println(currentLatitude)
+            println(currentLongitude)
+
+            recyclerViewAdapter= RecyclerViewAdapter(response)
+            recyclerView.adapter=recyclerViewAdapter
+
+        }
+
     }
 
     private fun handleError(t: Throwable) {
         Log.d("handleError", "Error: $t")
         Toast.makeText(requireContext(),"Unexpected Error! Please try again. Error: "+t.localizedMessage,Toast.LENGTH_LONG).show()
     }
-    private fun handleResponse(response:NestedJSONModel){
+    /*private fun handleResponse(response:NestedJSONModel){
         response?.let {
             hideProgressBar()
             if(response.features.isNotEmpty()){
@@ -221,7 +307,7 @@ class HomeFragment : Fragment() {
 
         }
 
-    }
+    }*/
 
     override fun onDestroy() {
         super.onDestroy()
