@@ -21,6 +21,7 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.android.material.snackbar.Snackbar
 import com.halilakpinar.earthqapp.Adapter.RecyclerViewAdapter
+import com.halilakpinar.earthqapp.Adapter.showCustomToast
 import com.halilakpinar.earthqapp.Model.AfadEarthquake
 import com.halilakpinar.earthqapp.Service.AfadAPI
 import com.halilakpinar.earthqapp.Settings.Constants.BASE_URL_AFAD
@@ -123,7 +124,8 @@ class HomeFragment : Fragment() {
 
             }else{
                 //permission denied
-                Toast.makeText(requireContext(),"Permission denied!",Toast.LENGTH_LONG).show()
+                Toast(requireContext()).showCustomToast ("Permission denied!", requireActivity())
+
             }
         }
     }
@@ -196,7 +198,7 @@ class HomeFragment : Fragment() {
             hideProgressBar()
 
             if(response.isEmpty()){
-                Toast.makeText(requireContext(),"Not Found Any Earthquake",Toast.LENGTH_LONG).show()
+                Toast(requireContext()).showCustomToast ("Not Found Any Earthquake", requireActivity())
             }
 
             recyclerViewAdapter= RecyclerViewAdapter(response)
@@ -205,7 +207,8 @@ class HomeFragment : Fragment() {
     }
 
     private fun handleError(t: Throwable) {
-        Toast.makeText(requireContext(),"Unexpected Error! Please try again. Error: "+t.localizedMessage,Toast.LENGTH_LONG).show()
+        Toast(requireContext()).showCustomToast ("Unexpected Error! Please try again. Error: "+t.localizedMessage, requireActivity())
+
     }
 
     override fun onDestroy() {

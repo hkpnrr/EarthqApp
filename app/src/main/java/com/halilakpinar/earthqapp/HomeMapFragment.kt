@@ -25,6 +25,7 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.android.material.snackbar.Snackbar
+import com.halilakpinar.earthqapp.Adapter.showCustomToast
 import com.halilakpinar.earthqapp.Model.AfadEarthquake
 import com.halilakpinar.earthqapp.Service.AfadAPI
 import com.halilakpinar.earthqapp.Settings.Constants
@@ -152,7 +153,8 @@ class HomeMapFragment : Fragment() {
                     loadData()
                 }
                 .addOnFailureListener { exception ->
-                    Toast.makeText(requireContext(),exception.localizedMessage, Toast.LENGTH_LONG).show()
+                    Toast(requireContext()).showCustomToast (exception.localizedMessage, requireActivity())
+
                 }
         }
     }
@@ -177,13 +179,15 @@ class HomeMapFragment : Fragment() {
                             loadData()
                         }
                         .addOnFailureListener { exception ->
-                            Toast.makeText(requireContext(),exception.localizedMessage,Toast.LENGTH_LONG).show()
+                            Toast(requireContext()).showCustomToast (exception.localizedMessage, requireActivity())
+
                         }
                 }
 
             }else{
                 //permission denied
-                Toast.makeText(requireContext(),"Permission denied!",Toast.LENGTH_LONG).show()
+                Toast(requireContext()).showCustomToast ("Permission denied!", requireActivity())
+
             }
         }
     }
@@ -221,7 +225,8 @@ class HomeMapFragment : Fragment() {
     }
 
     private fun handleError(t: Throwable) {
-        Toast.makeText(requireContext(),"Unexpected Error! Please try again. Error: "+t.localizedMessage,Toast.LENGTH_LONG).show()
+        Toast(requireContext()).showCustomToast ("Unexpected Error! Please try again. Error: "+t.localizedMessage, requireActivity())
+
     }
 
     private fun handleResponse(response:List<AfadEarthquake>){
@@ -229,7 +234,8 @@ class HomeMapFragment : Fragment() {
             hideProgressBar()
 
             if(response.isEmpty()){
-                Toast.makeText(requireContext(),"Not Found Any Earthquake",Toast.LENGTH_LONG).show()
+                Toast(requireContext()).showCustomToast ("Not Found Any Earthquake", requireActivity())
+
             }
 
             dataList=response

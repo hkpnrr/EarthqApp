@@ -15,6 +15,7 @@ import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
+import com.halilakpinar.earthqapp.Adapter.showCustomToast
 import com.halilakpinar.earthqapp.Model.AfadEarthquake
 import com.halilakpinar.earthqapp.Service.AfadAPI
 import com.halilakpinar.earthqapp.Settings.Constants
@@ -63,7 +64,8 @@ class SearchFragment : Fragment() , GoogleMap.OnMapLongClickListener{
         googleMap.setOnMapLongClickListener(this)
 
         if(dataList.isEmpty()){
-            Toast.makeText(requireContext(),"Not Found Any Earthquake",Toast.LENGTH_LONG).show()
+            Toast(requireContext()).showCustomToast ("Not Found Any Earthquake", requireActivity())
+
         }
         for (feature: AfadEarthquake in dataList){
             googleMap.addMarker(MarkerOptions().position(LatLng(feature.latitude.toDouble(),feature.longitude.toDouble())).title(feature.eventID))
@@ -146,12 +148,14 @@ class SearchFragment : Fragment() , GoogleMap.OnMapLongClickListener{
 
         }
         else{
-            Toast.makeText(requireContext(),"Enter inputs properly!",Toast.LENGTH_SHORT).show()
+            Toast(requireContext()).showCustomToast ("Enter inputs properly!", requireActivity())
+
         }
     }
 
     private fun handleError(t: Throwable) {
-        Toast.makeText(requireContext(),"Unexpected Error! Please try again. Error: "+t.localizedMessage,Toast.LENGTH_LONG).show()
+        Toast(requireContext()).showCustomToast ("Unexpected Error! Please try again. Error: "+t.localizedMessage, requireActivity())
+
     }
 
     fun showProgressBar(){
@@ -189,7 +193,7 @@ class SearchFragment : Fragment() , GoogleMap.OnMapLongClickListener{
             hideProgressBar()
 
             if(response.isEmpty()){
-                Toast.makeText(requireContext(),"Not Found Any Earthquake",Toast.LENGTH_LONG).show()
+                Toast(requireContext()).showCustomToast ("Not Found Any Earthquake", requireActivity())
             }
 
             dataList=response
