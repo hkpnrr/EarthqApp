@@ -199,10 +199,14 @@ class HomeFragment : Fragment() {
 
             if(response.isEmpty()){
                 Toast(requireContext()).showCustomToast ("Not Found Any Earthquake", requireActivity())
+                textViewNullResponse.visibility=View.VISIBLE
+            }
+            else{
+                textViewNullResponse.visibility=View.GONE
+                recyclerViewAdapter= RecyclerViewAdapter(response)
+                recyclerView.adapter=recyclerViewAdapter
             }
 
-            recyclerViewAdapter= RecyclerViewAdapter(response)
-            recyclerView.adapter=recyclerViewAdapter
         }
     }
 

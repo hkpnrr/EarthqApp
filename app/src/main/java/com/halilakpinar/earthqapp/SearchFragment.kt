@@ -127,8 +127,8 @@ class SearchFragment : Fragment() , GoogleMap.OnMapLongClickListener{
             val actualMonth=month+1
 
             selectedDate= LocalDate.of(year,actualMonth,dayOfMonth)
-            endDate=selectedDate?.minusDays(-15).toString()
-            startDate=selectedDate?.minusDays(15).toString()
+            endDate=selectedDate?.minusDays(-2).toString()
+            startDate=selectedDate?.minusDays(2).toString()
 
         }
 
